@@ -1,0 +1,26 @@
+{
+  "name": "@freedomforeversolar/halo",
+  "version": "1.0.0",
+  "description": "Local DNS and SSL management tool for development",
+  "type": "module",
+  "bin": {
+    "halo": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun build ./src/cli.ts --compile --outfile halo",
+    "dev": "bun run ./src/cli.ts"
+  },
+  "keywords": ["dns", "ssl", "localhost", "development", "tls", "https"],
+  "author": "FreedomForeverSolar",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2"
+  }
+}
