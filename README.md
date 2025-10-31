@@ -8,7 +8,7 @@ Halo makes it easy to use custom domains like `portal.myapp` or `api.helios` ins
 
 ```bash
 # Install via Homebrew
-brew install freedomforeversolar/tap/halo
+brew install freedomforeversolar/tools/halo
 
 # Run initial setup (requires sudo for system configuration)
 halo setup
@@ -32,11 +32,8 @@ That's it! Your local service is now accessible via `https://portal.myapp` with 
 ### Option 1: Homebrew (Recommended)
 
 ```bash
-# Add the FreedomForeverSolar tap
-brew tap freedomforeversolar/tap
-
-# Install Halo
-brew install halo
+# Install directly (tap is added automatically)
+brew install freedomforeversolar/tools/halo
 ```
 
 The Homebrew formula automatically installs dependencies (`caddy` and `dnsmasq`).
@@ -546,3 +543,70 @@ MIT License - see LICENSE file for details.
 ## Contributing
 
 Contributions welcome! Please see the contributing guidelines in the repository.
+
+---
+
+## Development & Release Process
+
+### Building Locally
+
+```bash
+# Build for current architecture
+make build
+
+# Build for all architectures (ARM64 + x64)
+make build-release
+```
+
+### Creating a Release
+
+Releases are triggered by pushing Git tags. When you push a version tag, GitHub Actions automatically builds and publishes the release.
+
+#### Step 1: Bump Version
+
+Update the version in `package.json` using the Makefile:
+
+```bash
+make bump-version
+```
+
+You'll be prompted to enter the new version number (e.g., `1.0.1`). This follows [semantic versioning](https://semver.org/):
+- **Patch** (1.0.0 → 1.0.1): Bug fixes, minor changes
+- **Minor** (1.0.0 → 1.1.0): New features, backwards compatible
+- **Major** (1.0.0 → 2.0.0): Breaking changes
+
+#### Step 2: Commit and Tag
+
+Commit the version change and create a Git tag:
+
+```bash
+# Commit the version bump
+git commit -am 'chore: bump version to X.Y.Z'
+
+# Create an annotated tag
+git tag -a vX.Y.Z -m 'Release vX.Y.Z'
+
+# Push commit and tags
+git push origin main --tags
+```
+
+#### Step 3: Automated Release
+
+When the tag is pushed, GitHub Actions automatically:
+1. Builds binaries for macOS ARM64 and x64
+2. Calculates SHA256 checksums
+3. Creates a GitHub Release with binaries attached
+4. Updates the Homebrew formula in `freedomforeversolar/tools`
+5. Pushes the updated formula to the tap repository
+
+#### Step 4: Installation
+
+After the release completes (~5 minutes), users can install:
+
+```bash
+# First time installation
+brew install freedomforeversolar/tools/halo
+
+# Upgrade existing installation
+brew upgrade freedomforeversolar/tools/halo
+```
