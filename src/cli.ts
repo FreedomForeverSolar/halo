@@ -1,13 +1,6 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
-const version = packageJson.version;
 import { setupCommand } from './commands/setup';
 import { addCommand } from './commands/add';
 import { cleanupCommand } from './commands/cleanup';
@@ -32,6 +25,7 @@ import {
   dnsRestartCommand,
   dnsStatusCommand
 } from './commands/dns';
+import { version } from './version';
 
 const program = new Command();
 
