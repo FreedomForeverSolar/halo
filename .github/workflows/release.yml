@@ -149,11 +149,6 @@ jobs:
               bin.install "halo-darwin-#{Hardware::CPU.arch}" => "halo"
             end
           
-            def post_install
-              # Ensure dnsmasq is started
-              system "brew", "services", "start", "dnsmasq" unless system("brew services list | grep dnsmasq | grep started")
-            end
-          
             def caveats
               <<~EOS
                 🔵 Halo has been installed!
