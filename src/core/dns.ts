@@ -68,11 +68,6 @@ export async function removeDNSForTLD(tld: string): Promise<void> {
   await restartDnsmasq();
 }
 
-export async function testDNSResolution(domain: string): Promise<boolean> {
-  const result = await execCommand(`ping -c 1 -t 1 ${domain}`);
-  return result.success;
-}
-
 export async function flushDNSCache(): Promise<void> {
   // macOS requires sudo for DNS cache flush
   await execCommand('sudo dscacheutil -flushcache');
