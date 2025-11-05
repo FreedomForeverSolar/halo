@@ -96,7 +96,8 @@ export async function setupCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Setup failed:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 

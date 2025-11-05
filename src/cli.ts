@@ -26,6 +26,7 @@ import {
   dnsStatusCommand
 } from './commands/dns';
 import { version } from './version';
+import { checkForUpdatesBackground, displayUpdateNotice } from './core/version-check';
 
 const program = new Command();
 
@@ -282,4 +283,8 @@ nsCommand
   });
 
 // Parse arguments
-program.parse();
+(async () => {
+  checkForUpdatesBackground(version);
+  await program.parseAsync();
+  await displayUpdateNotice(version);
+})();

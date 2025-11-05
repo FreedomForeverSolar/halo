@@ -64,7 +64,8 @@ export async function listCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to list mappings:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -96,14 +97,16 @@ export async function removeCommand(url: string, options: RemoveCommandOptions =
     // Check if domain exists
     if (!config.mappings[domain]) {
       console.log(chalk.red('✗ No domain mapping found'));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // Remove specific port or all ports
     if (specificPort !== null) {
       if (!config.mappings[domain][specificPort]) {
         console.log(chalk.red('✗ No domain mapping found'));
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       
       delete config.mappings[domain][specificPort];
@@ -136,13 +139,14 @@ export async function removeCommand(url: string, options: RemoveCommandOptions =
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to remove mapping:'), error.message);
-    
+
     // Provide helpful hint if service isn't running
     if (error.message.includes('not running')) {
       console.log(chalk.yellow('\n💡 Tip: Run'), chalk.cyan('halo start'), chalk.yellow('to start the Caddy service'));
     }
-    
-    process.exit(1);
+
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -158,7 +162,8 @@ export async function startCommand(): Promise<void> {
     console.log(chalk.green('✓ Service started\n'));
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to start service:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -169,7 +174,8 @@ export async function stopCommand(): Promise<void> {
     console.log(chalk.green('✓ Service stopped\n'));
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to stop service:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -185,7 +191,8 @@ export async function restartCommand(): Promise<void> {
     console.log(chalk.green('✓ Service restarted\n'));
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to restart service:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 

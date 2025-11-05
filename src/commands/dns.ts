@@ -38,7 +38,8 @@ export async function dnsStartCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to start dnsmasq:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -60,7 +61,8 @@ export async function dnsStopCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to stop dnsmasq:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -87,7 +89,8 @@ export async function dnsRestartCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to restart dnsmasq:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -144,6 +147,7 @@ export async function dnsStatusCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to check DNS status:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
