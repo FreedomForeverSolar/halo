@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { loadConfig, saveConfig } from '../core/config';
-import { registerTLD, unregisterTLD, checkTLDRegistration, testDNSResolution } from '../core/dns';
-import { getDomainsForNamespace, testDomainRouting } from '../utils';
+import { registerTLD, unregisterTLD, checkTLDRegistration } from '../core/dns';
+import { getDomainsForNamespace, testDomainRouting, testDNSResolution } from '../utils';
 
 export async function addNamespaceCommand(tld: string): Promise<void> {
   try {
