@@ -78,7 +78,8 @@ export async function cleanupCommand(): Promise<void> {
 
   } catch (error: any) {
     console.error(chalk.red('\n✗ Cleanup failed:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 

@@ -94,7 +94,8 @@ export async function doctorCommand(): Promise<void> {
       console.log(chalk.white('Suggestions:'));
       suggestions.forEach(s => console.log(chalk.gray('  → ') + s));
       console.log();
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // [3/4] DNS Check
@@ -213,12 +214,14 @@ export async function doctorCommand(): Promise<void> {
         suggestions.forEach(s => console.log(chalk.gray('  → ') + s));
         console.log();
       }
-      
-      process.exit(1);
+
+      process.exitCode = 1;
+      return;
     }
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Doctor check failed:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }

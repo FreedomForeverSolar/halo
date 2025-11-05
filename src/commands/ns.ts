@@ -37,7 +37,8 @@ export async function addNamespaceCommand(tld: string): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to register namespace:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -73,7 +74,8 @@ export async function removeNamespaceCommand(tld: string, options: { force?: boo
         console.log(chalk.cyan(`  halo remove ${domain}`));
       }
       console.log();
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // Unregister DNS (requires sudo)
@@ -90,7 +92,8 @@ export async function removeNamespaceCommand(tld: string, options: { force?: boo
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to remove namespace:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -127,7 +130,8 @@ export async function listNamespaceCommand(): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('✗ Failed to list namespaces:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -144,7 +148,8 @@ export async function checkNamespaceCommand(tld: string): Promise<void> {
     if (!inConfig) {
       console.log(chalk.red('✗ Namespace not registered\n'));
       console.log(chalk.yellow('Run:'), chalk.cyan(`halo ns add ${tld}\n`));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     let hasIssues = false;
@@ -204,7 +209,8 @@ export async function checkNamespaceCommand(tld: string): Promise<void> {
     console.log();
     if (!hasIssues) {
       console.log(chalk.green.bold('✓ Namespace is healthy\n'));
-      process.exit(0);
+      process.exitCode = 0;
+      return;
     } else {
       console.log(chalk.yellow.bold('⚠ Namespace has issues\n'));
       if (!dnsConfigured || !resolved) {
@@ -213,12 +219,14 @@ export async function checkNamespaceCommand(tld: string): Promise<void> {
       } else {
         console.log(chalk.yellow('Try:'), chalk.cyan('halo restart\n'));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to check namespace:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }
 
@@ -233,7 +241,8 @@ export async function fixNamespaceCommand(tld: string): Promise<void> {
     if (!config.tlds[tld]?.dnsConfigured) {
       console.log(chalk.red('✗ Namespace is not registered in Halo config'));
       console.log(chalk.yellow('\nRegister it first:'), chalk.cyan(`halo ns add ${tld}\n`));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // Import DNS functions
@@ -289,6 +298,7 @@ export async function fixNamespaceCommand(tld: string): Promise<void> {
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to fix namespace:'), error.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 }

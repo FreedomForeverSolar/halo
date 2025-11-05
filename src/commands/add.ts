@@ -12,7 +12,8 @@ export async function addCommand(url: string, target: string, options: AddComman
       console.error(chalk.red('✗ Invalid target format'));
       console.log(chalk.yellow('  Expected format: localhost:port or IP:port'));
       console.log(chalk.yellow('  Example: localhost:3000'));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // 2. Parse URL
@@ -29,7 +30,8 @@ export async function addCommand(url: string, target: string, options: AddComman
       console.error(chalk.red(`\n✗ Namespace '.${parsed.tld}' is not registered\n`));
       console.log(chalk.yellow('Register it first with:'), chalk.cyan(`halo ns add ${parsed.tld}`));
       console.log();
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     
     // 5. Update config with mappings
@@ -79,12 +81,13 @@ export async function addCommand(url: string, target: string, options: AddComman
     
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to add mapping:'), error.message);
-    
+
     // Provide helpful hint if service isn't running
     if (error.message.includes('not running')) {
       console.log(chalk.yellow('\n💡 Tip: Run'), chalk.cyan('halo start'), chalk.yellow('to start the Caddy service'));
     }
-    
-    process.exit(1);
+
+    process.exitCode = 1;
+    return;
   }
 }
