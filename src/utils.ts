@@ -90,3 +90,34 @@ export async function testDNSResolution(domain: string): Promise<boolean> {
   const result = await execCommand(`dig @127.0.0.1 -p 53530 +short ${domain} +time=1 +tries=1`);
   return result.success && result.stdout === '127.0.0.10';
 }
+
+export function getDomainsForNamespace(config: any, tld: string): Array<{ domain: string; ports: number[] }> {
+  // Get all domains using a specific namespace/TLD
+  const domains: Array<{ domain: string; ports: number[] }> = [];
+
+  for (const [domain, portMappings] of Object.entries(config.mappings)) {
+    const domainTld = domain.split('.').pop();
+    if (domainTld === tld) {
+      const ports = Object.keys(portMappings).map(p => parseInt(p));
+      domains.push({ domain, ports });
+    }
+  }
+
+  return domains;
+}
+
+export async function testDomainRouting(domain: string, port: number = 80): Promise<boolean> {
+  // Test if domain routes through the proxy by attempting an HTTP request
+  // Any HTTP response (2xx, 3xx, 4xx, 5xx) means routing is working
+  const url = port === 80 ? `http://${domain}` : `http://${domain}:${port}`;
+  const result = await execCommand(`curl -s -o /dev/null -w "%{http_code}" "${url}" --max-time 2 --connect-timeout 2`);
+
+  // Check if we got any HTTP response code (including connection refused would return empty)
+  if (!result.success || !result.stdout) {
+    return false;
+  }
+
+  // Any valid HTTP status code means routing is working
+  const statusCode = parseInt(result.stdout);
+  return !isNaN(statusCode) && statusCode >= 100 && statusCode < 600;
+}

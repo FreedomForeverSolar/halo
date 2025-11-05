@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { loadConfig, saveConfig } from '../core/config';
 import { registerTLD, unregisterTLD, checkTLDRegistration, testDNSResolution } from '../core/dns';
+import { getDomainsForNamespace, testDomainRouting } from '../utils';
 
 export async function addNamespaceCommand(tld: string): Promise<void> {
   try {
@@ -133,44 +134,88 @@ export async function listNamespaceCommand(): Promise<void> {
 export async function checkNamespaceCommand(tld: string): Promise<void> {
   try {
     console.log(chalk.blue(`\nChecking namespace: .${tld}...\n`));
-    
+
     // Load config
     const config = await loadConfig();
-    
+
     // Check config
     const inConfig = config.tlds[tld]?.dnsConfigured === true;
-    console.log(chalk.gray('Config:'), inConfig ? chalk.green('✓ Registered') : chalk.red('✗ Not registered'));
-    
+
+    if (!inConfig) {
+      console.log(chalk.red('✗ Namespace not registered\n'));
+      console.log(chalk.yellow('Run:'), chalk.cyan(`halo ns add ${tld}\n`));
+      process.exit(1);
+    }
+
+    let hasIssues = false;
+
     // Check DNS configuration
     const dnsConfigured = await checkTLDRegistration(tld);
-    console.log(chalk.gray('DNS Configuration:'), dnsConfigured ? chalk.green('✓ Configured') : chalk.red('✗ Not configured'));
-    
+
     // Test DNS resolution
     let resolved = false;
     if (dnsConfigured) {
-      console.log(chalk.blue('\nTesting DNS resolution...'));
       const testDomain = `test.${tld}`;
       resolved = await testDNSResolution(testDomain);
-      console.log(chalk.gray(`Resolution (${testDomain}):`), resolved ? chalk.green('✓ Working') : chalk.red('✗ Failed'));
     }
-    
-    // Summary - only consider fully working if config, DNS, AND resolution all pass
-    const isFullyWorking = inConfig && dnsConfigured && resolved;
+
+    // Show namespace DNS status
+    if (resolved) {
+      console.log(chalk.green('Namespace DNS: ✓ Resolving to Halo'));
+    } else {
+      console.log(chalk.red('Namespace DNS: ✗ Not resolving to Halo'));
+      hasIssues = true;
+    }
+
+    // Get domains for this namespace
+    const domains = getDomainsForNamespace(config, tld);
+
+    // Test domain routing if DNS is working
+    if (resolved) {
+      if (domains.length === 0) {
+        console.log(chalk.gray('Domain Routes: ℹ No domains configured'));
+      } else {
+        console.log(chalk.white('Domain Routes:'));
+        let routingIssues = 0;
+
+        for (const { domain, ports } of domains) {
+          for (const port of ports) {
+            const routes = await testDomainRouting(domain, port);
+            const portStr = port !== 80 ? `:${port}` : '';
+            const target = config.mappings[domain][port].target;
+
+            if (routes) {
+              console.log(chalk.green(`  ✓ ${domain}${portStr} → ${target}`));
+            } else {
+              console.log(chalk.red(`  ✗ ${domain}${portStr} → ${target}`));
+              routingIssues++;
+              hasIssues = true;
+            }
+          }
+        }
+
+        if (routingIssues > 0) {
+          console.log(chalk.yellow(`\n⚠ ${routingIssues} domain${routingIssues > 1 ? 's' : ''} not routing properly`));
+        }
+      }
+    }
+
+    // Summary
     console.log();
-    if (isFullyWorking) {
-      console.log(chalk.green.bold('✓ Namespace is fully registered and working\n'));
+    if (!hasIssues) {
+      console.log(chalk.green.bold('✓ Namespace is healthy\n'));
       process.exit(0);
     } else {
       console.log(chalk.yellow.bold('⚠ Namespace has issues\n'));
-      if (!inConfig) {
-        console.log(chalk.yellow('Run:'), chalk.cyan(`halo ns add ${tld}\n`));
-      } else if (!dnsConfigured || !resolved) {
+      if (!dnsConfigured || !resolved) {
         console.log(chalk.yellow('Run:'), chalk.cyan(`halo ns fix ${tld}\n`));
         console.log(chalk.yellow('Or try:'), chalk.cyan(`halo dns restart\n`));
+      } else {
+        console.log(chalk.yellow('Try:'), chalk.cyan('halo restart\n'));
       }
       process.exit(1);
     }
-    
+
   } catch (error: any) {
     console.error(chalk.red('\n✗ Failed to check namespace:'), error.message);
     process.exit(1);
