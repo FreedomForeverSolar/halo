@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { existsSync } from 'fs';
-import { checkDependency, getConfigPath, getLaunchdPlistPath, execCommand, checkDnsmasqRunning, testDNSResolution } from '../utils';
+import { checkDependency, getConfigPath, getLaunchdPlistPath, execCommand, checkDnsmasqRunning, testDNSResolution, getDomainsForNamespace, testDomainRouting } from '../utils';
 import { checkDnsmasqEntry } from '../core/dns';
 import { loadConfig } from '../core/config';
 import { getServiceStatus } from '../core/service';
@@ -20,18 +20,18 @@ export async function doctorCommand(): Promise<void> {
     const caddyInstalled = await checkDependency('caddy');
     
     if (dnsmasqInstalled) {
-      console.log(chalk.green('✓ dnsmasq installed'));
+      console.log(chalk.green('✓ DNS server installed'));
     } else {
-      console.log(chalk.red('✗ dnsmasq not installed'));
-      suggestions.push(`Install dnsmasq: ${chalk.cyan('brew install dnsmasq')}`);
+      console.log(chalk.red('✗ DNS server not installed'));
+      suggestions.push(`Install DNS server: ${chalk.cyan('brew install dnsmasq')}`);
       issuesFound++;
     }
-    
+
     if (caddyInstalled) {
-      console.log(chalk.green('✓ caddy installed'));
+      console.log(chalk.green('✓ Proxy server installed'));
     } else {
-      console.log(chalk.red('✗ caddy not installed'));
-      suggestions.push(`Install caddy: ${chalk.cyan('brew install caddy')}`);
+      console.log(chalk.red('✗ Proxy server not installed'));
+      suggestions.push(`Install proxy server: ${chalk.cyan('brew install caddy')}`);
       issuesFound++;
     }
     
@@ -71,17 +71,17 @@ export async function doctorCommand(): Promise<void> {
     }
     
     if (caddyServiceExists) {
-      console.log(chalk.green('✓ Caddy service installed'));
+      console.log(chalk.green('✓ Proxy service installed'));
     } else {
-      console.log(chalk.red('✗ Caddy service not installed'));
+      console.log(chalk.red('✗ Proxy service not installed'));
       suggestions.push(`Run setup: ${chalk.cyan('halo setup')}`);
       issuesFound++;
     }
     
     if (dnsmasqServiceExists) {
-      console.log(chalk.green('✓ dnsmasq service installed'));
+      console.log(chalk.green('✓ DNS service installed'));
     } else {
-      console.log(chalk.red('✗ dnsmasq service not installed'));
+      console.log(chalk.red('✗ DNS service not installed'));
       suggestions.push(`Run setup: ${chalk.cyan('halo setup')}`);
       issuesFound++;
     }
@@ -98,101 +98,105 @@ export async function doctorCommand(): Promise<void> {
     }
     
     // [3/4] DNS Check
-    console.log(chalk.white.bold('[3/4] DNS (dnsmasq)'));
-    
+    console.log(chalk.white.bold('[3/4] DNS'));
+
     const config = await loadConfig();
     const tlds = Object.keys(config.tlds);
-    
+
     if (tlds.length === 0) {
       console.log(chalk.gray('No namespaces configured yet'));
       console.log();
     } else {
-      const tldsWithIssues: string[] = [];
-      
-      // Check all TLDs (read-only)
+      // Check if DNS service is running
+      const dnsmasqRunning = await checkDnsmasqRunning();
+      if (dnsmasqRunning) {
+        console.log(chalk.green('✓ DNS service running'));
+      } else {
+        console.log(chalk.red('✗ DNS service not running'));
+        suggestions.push(`Start DNS: ${chalk.cyan('halo dns start')}`);
+        issuesFound++;
+      }
+
+      // Check each namespace
+      console.log(chalk.white('Namespaces:'));
+
       for (const tld of tlds) {
-        let tldHasIssues = false;
-        
+        const namespaceIssues: string[] = [];
+        let hasInfraIssues = false;
+
         // Check dnsmasq.conf entry
         const hasDnsmasqEntry = await checkDnsmasqEntry(tld);
         if (!hasDnsmasqEntry) {
-          tldHasIssues = true;
+          namespaceIssues.push('missing DNS config');
+          hasInfraIssues = true;
         }
-        
+
         // Check /etc/resolver file
         const resolverPath = `/etc/resolver/${tld}`;
         const hasResolver = existsSync(resolverPath);
         if (!hasResolver) {
-          tldHasIssues = true;
+          namespaceIssues.push('missing resolver');
+          hasInfraIssues = true;
         }
-        
-        if (tldHasIssues) {
-          tldsWithIssues.push(tld);
-        }
-      }
-      
-      // Show condensed namespace setup status
-      const tldCount = tlds.length;
-      
-      if (tldsWithIssues.length === 0) {
-        console.log(chalk.green(`✓ ${tldCount} namespace${tldCount > 1 ? 's' : ''} configured`));
-      } else {
-        console.log(chalk.yellow(`⚠ ${tldsWithIssues.length} of ${tldCount} namespace${tldCount > 1 ? 's' : ''} ${tldsWithIssues.length > 1 ? 'have' : 'has'} configuration issues`));
-        for (const tld of tldsWithIssues) {
-          console.log(chalk.gray(`  → .${tld}`));
-        }
-        issuesFound += tldsWithIssues.length;
-        
-        // Add fix suggestions for each namespace
-        for (const tld of tldsWithIssues) {
-          suggestions.push(`Fix .${tld} configuration: ${chalk.cyan(`halo ns fix ${tld}`)}`);
-        }
-      }
-      
-      // Check if dnsmasq is running
-      const dnsmasqRunning = await checkDnsmasqRunning();
-      if (dnsmasqRunning) {
-        console.log(chalk.green('✓ dnsmasq running'));
-      } else {
-        console.log(chalk.red('✗ dnsmasq not running'));
-        suggestions.push(`Start dnsmasq: ${chalk.cyan('halo dns start')}`);
-        issuesFound++;
-      }
-      
-      // Test DNS resolution for all TLDs
-      if (dnsmasqRunning) {
-        let failedResolutions = 0;
-        for (const tld of tlds) {
+
+        // Test DNS resolution
+        let dnsResolves = false;
+        if (dnsmasqRunning && !hasInfraIssues) {
           const testDomain = `test.${tld}`;
-          const resolves = await testDNSResolution(testDomain);
-          if (!resolves) {
-            failedResolutions++;
+          dnsResolves = await testDNSResolution(testDomain);
+          if (!dnsResolves) {
+            namespaceIssues.push('DNS not resolving to Proxy');
           }
         }
-        
-        if (failedResolutions === 0) {
-          console.log(chalk.green('✓ DNS resolution tests'));
-        } else {
-          console.log(chalk.yellow(`⚠ ${failedResolutions} namespace${failedResolutions > 1 ? 's' : ''} failed resolution test`));
-          suggestions.push(`Check namespace resolution: ${chalk.cyan('halo ns status <namespace>')}`);
-          suggestions.push(`Restart dnsmasq: ${chalk.cyan('halo dns restart')}`);
+
+        // Get domains for this namespace
+        const domains = getDomainsForNamespace(config, tld);
+
+        // Test domain routing if namespace DNS is working
+        const routingIssues: string[] = [];
+        if (dnsResolves && domains.length > 0) {
+          for (const { domain, ports } of domains) {
+            for (const port of ports) {
+              const routes = await testDomainRouting(domain, port);
+              if (!routes) {
+                routingIssues.push(`${domain}${port !== 80 ? ':' + port : ''}`);
+              }
+            }
+          }
+        }
+
+        // Display results for this namespace
+        if (namespaceIssues.length === 0 && routingIssues.length === 0) {
+          // All checks passed
+          console.log(chalk.green(`  ✓ ${tld}: Healthy`));
+        } else if (namespaceIssues.length > 0) {
+          // DNS resolution or infrastructure issues
+          console.log(chalk.red(`  ✗ ${tld}: ${namespaceIssues.join(', ')}`));
+          suggestions.push(`Fix ${tld} namespace configuration: ${chalk.cyan(`halo ns fix ${tld}`)}`);
+          issuesFound++;
+        } else if (routingIssues.length > 0) {
+          // Routing issues only
+          const routeCount = routingIssues.length;
+          const routeWord = routeCount === 1 ? 'route' : 'routes';
+          console.log(chalk.red(`  ✗ ${tld}: ${routeCount} ${routeWord} not resolving correctly`));
+          suggestions.push(`Check ${tld} namespace routing details: ${chalk.cyan(`halo ns status ${tld}`)}`);
           issuesFound++;
         }
       }
-      
+
       console.log();
     }
     
-    // [4/4] Loopback IP Setup & Caddy
-    console.log(chalk.white.bold('[4/4] Caddy'));
-    
-    // Check Caddy service
+    // [4/4] Proxy
+    console.log(chalk.white.bold('[4/4] Proxy'));
+
+    // Check Proxy service
     const caddyStatus = await getServiceStatus();
     if (caddyStatus.running) {
-      console.log(chalk.green('✓ Caddy running') + chalk.gray(` (PID: ${caddyStatus.pid})`));
+      console.log(chalk.green('✓ Proxy running') + chalk.gray(` (PID: ${caddyStatus.pid})`));
     } else {
-      console.log(chalk.red('✗ Caddy not running'));
-      suggestions.push(`Start Caddy: ${chalk.cyan('halo start')}`);
+      console.log(chalk.red('✗ Proxy not running'));
+      suggestions.push(`Start Proxy: ${chalk.cyan('halo start')}`);
       issuesFound++;
     }
     

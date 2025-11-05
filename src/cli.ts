@@ -146,6 +146,7 @@ program
   .description('Remove a domain mapping')
   .argument('<url>', 'Domain URL to remove (portal.myapp or portal.myapp:443)')
   .option('-v, --verbose', 'Show detailed output')
+  .alias('rm')
   .action(async (url: string, options: { verbose?: boolean }) => {
     await removeCommand(url, options);
   });
@@ -251,6 +252,7 @@ nsCommand
   .description('Unregister a namespace')
   .argument('<namespace>', 'Namespace to remove')
   .option('--force', 'Force removal even if domains exist')
+  .alias('rm')
   .action(async (namespace: string, options: { force?: boolean }) => {
     await removeNamespaceCommand(namespace, options);
   });
