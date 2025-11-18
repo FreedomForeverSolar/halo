@@ -10,7 +10,7 @@ import {
   createDnsmasqConfig,
   createDnsmasqService,
   startDnsmasqService,
-  stopSystemDnsmasq
+  restartDnsmasqService
 } from '../core/dnsmasq-service';
 
 export async function setupCommand(): Promise<void> {
@@ -20,7 +20,6 @@ export async function setupCommand(): Promise<void> {
   console.log(chalk.yellow('⚠  This setup requires sudo privileges to:'));
   console.log(chalk.gray('   - Create loopback alias (127.0.0.10)'));
   console.log(chalk.gray('   - Configure port forwarding (PF) rules'));
-  console.log(chalk.gray('   - Stop system dnsmasq (if running)'));
   console.log(chalk.gray('   - Create DNS resolver files'));
   console.log(chalk.gray('   - Trust Caddy CA certificate\n'));
   
@@ -41,49 +40,44 @@ export async function setupCommand(): Promise<void> {
     console.log(chalk.green('✓ Loopback alias configured\n'));
     
     
-    // 4. Stop system dnsmasq if running
-    console.log(chalk.blue('Checking for system dnsmasq...'));
-    await stopSystemDnsmasq();
-    console.log(chalk.green('✓ System dnsmasq stopped (if it was running)\n'));
-    
-    // 5. Create dnsmasq configuration
+    // 4. Create dnsmasq configuration
     console.log(chalk.blue('Creating dnsmasq configuration...'));
     await createDnsmasqConfig();
     console.log(chalk.green('✓ dnsmasq config created\n'));
     
-    // 6. Create and start halo dnsmasq service
+    // 5. Create and restart halo dnsmasq service
     console.log(chalk.blue('Setting up halo dnsmasq service...'));
     await createDnsmasqService();
-    await startDnsmasqService();
-    console.log(chalk.green('✓ dnsmasq service started\n'));
+    await restartDnsmasqService();
+    console.log(chalk.green('✓ dnsmasq service restarted\n'));
     
-    // 7. Initialize config
+    // 6. Initialize config
     console.log(chalk.blue('Initializing configuration...'));
     await initializeConfig();
     console.log(chalk.green('✓ Configuration initialized\n'));
-    
-    // 8. Setup PF port forwarding
+
+    // 7. Setup PF port forwarding
     console.log(chalk.blue('Configuring port forwarding (80→8080, 443→8443)...'));
     const config = await loadConfig();
     await setupPFRules(config.loopbackIP, config.httpPort, config.httpsPort);
     console.log(chalk.green('✓ Port forwarding configured\n'));
-    
-    // 9. Generate initial Caddyfile
+
+    // 8. Generate initial Caddyfile
     console.log(chalk.blue('Creating Caddyfile...'));
     await generateCaddyfile(config);
     console.log(chalk.green('✓ Caddyfile created\n'));
-    
-    // 10. Create Caddy service
+
+    // 9. Create Caddy service
     console.log(chalk.blue('Creating Caddy service...'));
     await createCaddyService();
     console.log(chalk.green('✓ Caddy service created\n'));
-    
-    // 11. Start Caddy
+
+    // 10. Start Caddy
     console.log(chalk.blue('Starting Caddy service...'));
     await startService();
     console.log(chalk.green('✓ Caddy service started\n'));
-    
-    // 12. Trust Caddy CA
+
+    // 11. Trust Caddy CA
     console.log(chalk.blue('Installing Caddy CA certificate...'));
     await trustCaddyCA();
     console.log(chalk.green('✓ Caddy CA trusted\n'));

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { existsSync } from 'fs';
-import { checkDependency, getConfigPath, getLaunchdPlistPath, execCommand, checkDnsmasqRunning, testDNSResolution, getDomainsForNamespace, testDomainRouting } from '../utils';
+import { checkDependency, getConfigPath, getLaunchdPlistPath, execCommand, checkDnsmasqRunning, testDNSResolution, getDomainsForNamespace, testDomainRouting, checkCaddyCAIsTrusted } from '../utils';
 import { checkDnsmasqEntry } from '../core/dns';
 import { loadConfig } from '../core/config';
 import { getServiceStatus } from '../core/service';
@@ -200,7 +200,17 @@ export async function doctorCommand(): Promise<void> {
       suggestions.push(`Start Proxy: ${chalk.cyan('halo start')}`);
       issuesFound++;
     }
-    
+
+    // Check SSL certificate trust
+    const caTrusted = await checkCaddyCAIsTrusted();
+    if (caTrusted) {
+      console.log(chalk.green('✓ SSL certificate trusted'));
+    } else {
+      console.log(chalk.red('✗ SSL certificate not trusted'));
+      suggestions.push(`Re-run setup to trust SSL certificate: ${chalk.cyan('halo setup')}`);
+      issuesFound++;
+    }
+
     console.log();
     
     // Summary
