@@ -4,7 +4,12 @@ import { execCommand, getLaunchdPlistPath, getDnsmasqConfPath } from '../utils';
 
 export async function createDnsmasqConfig(): Promise<void> {
   const confPath = getDnsmasqConfPath();
-  
+
+  // Only create if file doesn't exist (preserve existing config)
+  if (existsSync(confPath)) {
+    return;
+  }
+
   // Create basic dnsmasq configuration
   const config = `# Halo-managed dnsmasq configuration
 # This file is automatically managed by Halo
@@ -42,10 +47,10 @@ export async function addDnsmasqConfigEntry(tld: string, ip: string): Promise<vo
 
 export async function removeDnsmasqConfigEntry(tld: string): Promise<void> {
   const confPath = getDnsmasqConfPath();
-  
+
   // Remove entry from config file (no sudo needed)
-  const result = await execCommand(`sed -i '' "/address=\\\\/\\\\.${tld}\\\\//d" ${confPath}`);
-  
+  const result = await execCommand(`sed -i '' "/address=\\/\\.${tld}\\//d" ${confPath}`);
+
   if (!result.success) {
     throw new Error(`Failed to remove DNS entry: ${result.stderr}`);
   }
@@ -53,12 +58,12 @@ export async function removeDnsmasqConfigEntry(tld: string): Promise<void> {
 
 export async function checkDnsmasqConfigEntry(tld: string, ip: string): Promise<boolean> {
   const confPath = getDnsmasqConfPath();
-  
+
   if (!existsSync(confPath)) {
     return false;
   }
-  
-  const result = await execCommand(`grep "address=/\\\\.${tld}/${ip}" ${confPath}`);
+
+  const result = await execCommand(`grep "address=/\\.${tld}/${ip}" ${confPath}`);
   return result.success;
 }
 

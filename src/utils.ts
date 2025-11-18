@@ -121,3 +121,9 @@ export async function testDomainRouting(domain: string, port: number = 80): Prom
   const statusCode = parseInt(result.stdout);
   return !isNaN(statusCode) && statusCode >= 100 && statusCode < 600;
 }
+
+export async function checkCaddyCAIsTrusted(): Promise<boolean> {
+  // Check if Caddy's CA certificate is trusted in the system keychain
+  const result = await execCommand('security find-certificate -a -c "Caddy Local Authority" /Library/Keychains/System.keychain 2>/dev/null');
+  return result.success && result.stdout.includes('Caddy Local Authority');
+}
